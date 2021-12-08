@@ -193,6 +193,20 @@ func (s *Store) Get(hash []byte) (*os.File, error) {
 	return os.Open(s.FullPath(hash))
 }
 
+func (s *Store) Has(hash []byte) (bool, error) {
+	if !s.HasEnoughBits(hash) {
+		return false, errors.New("hash is too short")
+	}
+	_, err := os.Stat(s.FullPath(hash))
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (s *Store) Scan(prefix []byte, bits uint8, callback func(hash []byte)) error {
 	bitsAtDepth := make([]uint8, len(s.BitsPerFolder))
 	var sum uint8
