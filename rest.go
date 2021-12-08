@@ -13,15 +13,15 @@ import (
 type Hash [32]byte
 
 func (h *Hash) UnmarshalText(text []byte) error {
-    return nil
+	return nil
 }
 
 func (h *Hash) MarshalText() ([]byte, error) {
-    return []byte(hex.EncodeToString(h[:])), nil
+	return []byte(hex.EncodeToString(h[:])), nil
 }
 
 func (h *Hash) String() {
-    hex.EncodeToString(h[:])
+	hex.EncodeToString(h[:])
 }
 
 type Prefix struct {
@@ -30,11 +30,15 @@ type Prefix struct {
 }
 
 func httpPathToHash(path string) (Hash, bool) {
-	h, err := hex.DecodeString(strings.TrimPrefix(path, "/blob/"))
+	var ret Hash
+	n, err := hex.Decode(ret[:], []byte(strings.TrimPrefix(path, "/blob/")))
 	if err != nil {
 		return Hash{}, false
 	}
-	return Hash(h), true
+	if len(ret) != n {
+		return Hash{}, false
+	}
+	return ret, true
 }
 
 func handleGetBlob(r *http.Request) convreq.HttpResponse {
