@@ -28,6 +28,7 @@ func main() {
 	// TODO lees config
 	http.HandleFunc("/blob/", convreq.Wrap(handleGetBlob))
 	http.HandleFunc("/upload", convreq.Wrap(handlePostBlob))
+	http.HandleFunc("/list", convreq.Wrap(handleGetList))
 	http.HandleFunc("/query", func(w http.ResponseWriter, r *http.Request) {
 	})
 

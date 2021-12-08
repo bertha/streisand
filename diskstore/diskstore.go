@@ -208,13 +208,17 @@ func (s *Store) Has(hash []byte) (bool, error) {
 }
 
 func (s *Store) Scan(prefix []byte, bits uint8, callback func(hash []byte)) error {
-	bitsAtDepth := make([]uint8, len(s.BitsPerFolder))
+	bitsAtDepth := make([]uint8, len(s.BitsPerFolder), len(s.BitsPerFolder)+1)
 	var sum uint8
 	for i, b := range s.BitsPerFolder {
 		sum += b
 		bitsAtDepth[i] = min(sum, bits)
 	}
+	bitsAtDepth = append(bitsAtDepth, bits)
 	wd := func(path string, d fs.DirEntry, err error) error {
+		if path == s.Path {
+			return nil
+		}
 		if err != nil {
 			return err
 		}
@@ -222,7 +226,13 @@ func (s *Store) Scan(prefix []byte, bits uint8, callback func(hash []byte)) erro
 		if err != nil {
 			return err
 		}
-		h, err := hex.DecodeString(d.Name())
+		var enc string
+		if d.IsDir() {
+			enc = strings.ReplaceAll(path, "/", "")
+		} else {
+			enc = d.Name()
+		}
+		h, err := hex.DecodeString(enc)
 		if err != nil {
 			// Ignore invalid file.
 			if d.IsDir() {

@@ -61,3 +61,13 @@ func handleGetBlob(r *http.Request) convreq.HttpResponse {
 	hdrs.Set("Content-Length", fmt.Sprint(st.Size()))
 	return respond.WithHeaders(respond.Reader(fh), hdrs)
 }
+
+func handleGetList(r *http.Request) convreq.HttpResponse {
+	var ret []string
+	if err := store.Scan([]byte("1d"), 0, func(h []byte) {
+		ret = append(ret, hex.EncodeToString(h))
+	}); err != nil {
+		return respond.Error(err)
+	}
+	return respond.String(fmt.Sprintf("%d entries\n", len(ret)) + strings.Join(ret, "\n"))
+}
