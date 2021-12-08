@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/Jille/convreq"
+	"github.com/Jille/convreq/respond"
 )
 
 type Hash [32]byte
@@ -29,36 +32,23 @@ type Prefix struct {
 	Length int
 }
 
-func got(hash Hash) bool {
-}
-func httpPathToHash(path string) Hash {
-}
-func open(hash Hash) (os.File, error) {
+func httpPathToHash(path string) (Hash, bool) {
+	h, err := hex.DecodeString(strings.TrimPrefix(path, "/blob/"))
+	if err != nil {
+		return Hash{}, false
+	}
+	return Hash(h), true
 }
 
-func handleGetBlob(w http.ResponseWriter, r *http.Request) {
-	hash, err := httpPathToHash(r.Path)
-	if err != nil {
-		http.Error(w, err.String(), 400)
-		return
+func handleGetBlob(r *http.Request) convreq.HttpResponse {
+	hash, ok := httpPathToHash(r.URL.Path)
+	if !ok {
+		return respond.BadRequest("invalid hash")
 	}
-	fh, err := open(hash)
-	if err == ErrNotFound {
+	fh, err := store.Get(hash[:])
+	if os.IsNotExist(err) {
 		// TODO try with another
 		//
-		return
+		return respond.NotFound("blob not found")
 	}
-	// TODO serve back file
-}
-
-func main() {
-	// TODO lees config
-	http.HandleFunc("/blob/", func(w http.ResponseWriter, r *http.Request) {
-		handlePostBlob(w, r)
-	})
-	http.HandleFunc("/upload", convreq.Wrap(handlePostBlob))
-	http.HandleFunc("/query", func(w http.ResponseWriter, r *http.Request) {
-    })
-
-	http.ListenAndServe(":8080", nil)
 }
