@@ -7,9 +7,11 @@ import (
 	"errors"
 	"hash"
 	"io"
+	"io/fs"
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/icza/bitio"
 )
@@ -189,4 +191,69 @@ func (s *Store) Get(hash []byte) (*os.File, error) {
 		return nil, errors.New("hash is too short")
 	}
 	return os.Open(s.FullPath(hash))
+}
+
+func (s *Store) Scan(prefix []byte, bits uint8, callback func(hash []byte)) error {
+	bitsAtDepth := make([]uint8, len(s.BitsPerFolder))
+	var sum uint8
+	for i, b := range s.BitsPerFolder {
+		sum += b
+		bitsAtDepth[i] = min(sum, bits)
+	}
+	wd := func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		path, err = filepath.Rel(s.Path, path)
+		if err != nil {
+			return err
+		}
+		h, err := hex.DecodeString(d.Name())
+		if err != nil {
+			// Ignore invalid file.
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if !compareBits(prefix, h, bitsAtDepth[strings.Count(path, "/")]) {
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if !d.IsDir() {
+			callback(h)
+		}
+		return nil
+	}
+	return filepath.WalkDir(s.Path, wd)
+}
+
+func compareBits(a, b []byte, bits uint8) bool {
+	bra := bitio.NewReader(bytes.NewReader(a))
+	brb := bitio.NewReader(bytes.NewReader(b))
+	for bits >= 64 {
+		ba, errA := bra.ReadByte()
+		bb, errB := brb.ReadByte()
+		if errA != nil && errB != nil {
+			return true
+		}
+		if errA != nil || errB != nil {
+			return false
+		}
+		if ba != bb {
+			return false
+		}
+		bits -= 8
+	}
+	ba, errA := bra.ReadBits(uint8(bits))
+	bb, errB := brb.ReadBits(uint8(bits))
+	if errA != nil && errB != nil {
+		return true
+	}
+	if errA != nil || errB != nil {
+		return false
+	}
+	return ba == bb
 }
