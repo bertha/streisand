@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -52,4 +53,11 @@ func handleGetBlob(r *http.Request) convreq.HttpResponse {
 		//
 		return respond.NotFound("blob not found")
 	}
+	st, err := fh.Stat()
+	if err != nil {
+		return respond.Error(err)
+	}
+	hdrs := http.Header{}
+	hdrs.Set("Content-Length", fmt.Sprint(st.Size()))
+	return respond.WithHeaders(respond.Reader(fh), hdrs)
 }
