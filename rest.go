@@ -10,8 +10,18 @@ import (
 
 type Hash [32]byte
 
+func (h *Hash) UnmarshalText(text []byte) error {
+    if len(text) != 32 {
+        return
+    }
+}
+
+func (h *Hash) MarshalText() ([]byte, error) {
+    return []byte(hex.EncodeToString(h[:])), nil
+}
+
 func (h *Hash) String() {
-	hex.EncodeToString()
+    hex.EncodeToString(h[:])
 }
 
 type Prefix struct {
@@ -48,7 +58,7 @@ func main() {
 	})
 	http.HandleFunc("/upload", convreq.Wrap(handlePostBlob))
 	http.HandleFunc("/query", func(w http.ResponseWriter, r *http.Request) {
-	})
+    })
 
 	http.ListenAndServe(":8080", nil)
 }
