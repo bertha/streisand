@@ -2,49 +2,25 @@ package main
 
 import (
 	"net/http"
+    "encoding/hex"
 )
 
 type Hash [32]byte
 
-Hash.Xor(
+func (h *Hash) String() {
+    hex.EncodeToString(
+}
 
 type Prefix struct {
     Hash Hash
     Length int
 }
 
-type PrefixQuery struct {
-    Prefix Prefix
-    Depth uint
+func got(hash Hash) bool {
 }
-
-type Query struct {
-    Got []Hash
-    Prefixes []PrefixRequest
+func httpPathToHash(path string) Hash {
 }
-
-type QueryResponse struct {
-    Got []bool
-    Prefixes []map[int]string
-}
-
-func got(hash string) bool {
-}
-func validHash(hash string) bool {
-}
-func hashToPath(hash string) string {
-}
-func httpPathToHash(path string) {
-}
-func open(hash string) (os.File, error) {
-}
-
-func handlePostBlob(w http.ResponseWriter, r *http.Request) {
-    // TODO handle the case of given hash
-
-    // TODO get temp file
-    
-    // TODO move tempfile to hash
+func open(hash Hash) (os.File, error) {
 }
 
 func handleGetBlob(w http.ResponseWriter, r *http.Request) {
@@ -65,6 +41,9 @@ func handleGetBlob(w http.ResponseWriter, r *http.Request) {
 func main() {
 	// TODO lees config
 	http.HandleFunc("/blob/", func(w http.ResponseWriter, r *http.Request) {
+        handlePostBlob(w, r)
+	})
+	http.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			handlePostBlob(w, r)
 		} else if r.Method == "GET" {
