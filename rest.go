@@ -49,13 +49,3 @@ func handleGetBlob(r *http.Request) convreq.HttpResponse {
 	hdrs.Set("Content-Length", fmt.Sprint(st.Size()))
 	return respond.WithHeaders(respond.Reader(fh), hdrs)
 }
-
-func main() {
-	// TODO lees config
-	http.HandleFunc("/blob/", convreq.Wrap(handleGetBlob))
-	http.HandleFunc("/upload", convreq.Wrap(handlePostBlob))
-	http.HandleFunc("/query", func(w http.ResponseWriter, r *http.Request) {
-	})
-
-	http.ListenAndServe(":8080", nil)
-}

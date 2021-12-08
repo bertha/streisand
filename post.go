@@ -7,10 +7,7 @@ import (
 
 	"github.com/Jille/convreq"
 	"github.com/Jille/convreq/respond"
-	"github.com/bertha/streisand/diskstore"
 )
-
-var store *diskstore.Store
 
 func handlePostBlob(r *http.Request) convreq.HttpResponse {
 	// TODO handle the case of given hash
