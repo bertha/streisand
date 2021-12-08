@@ -23,6 +23,7 @@ func main() {
 		BitsPerFolder: []uint8{8, 8},
 		Fsync:         *withFsync,
 	}
+	store.Initialize()
 
 	// TODO lees config
 	http.HandleFunc("/blob/", convreq.Wrap(handleGetBlob))
