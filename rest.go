@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/hex"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -14,9 +13,7 @@ import (
 type Hash [32]byte
 
 func (h *Hash) UnmarshalText(text []byte) error {
-    if len(text) != 32 {
-        return
-    }
+    return nil
 }
 
 func (h *Hash) MarshalText() ([]byte, error) {

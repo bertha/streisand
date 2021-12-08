@@ -7,7 +7,7 @@ type PrefixQuery struct {
 
 type Query struct {
     Got []Hash
-    Prefixes []PrefixRequest
+    Prefixes []PrefixQuery
 }
 
 type QueryResponse struct {
