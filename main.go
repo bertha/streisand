@@ -5,20 +5,52 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/Jille/convreq"
 	"github.com/bertha/streisand/diskstore"
+	"github.com/bertha/streisand/xor"
 )
 
 var (
 	port      = flag.Int("port", 8080, "HTTP port to serve on")
-	dataDir   = flag.String("datadir", "", "Path to datadir")
-	withFsync = flag.Bool("with-fsync", false, "Whether to fsync newly written blobs")
+	dataDir   = flag.String("datadir", "", "Path to data directory")
+	cacheDir  = flag.String("cachedir", "", "Path to the cache directory")
+	withFsync = flag.Bool("with-fsync", false,
+		"Whether to fsync newly written blobs")
+	peers Peers
 )
 
+func setAdditionalFlags() {
+	flag.Var(&peers, "peer", "Provide url of peer")
+}
+
+type Peers []*url.URL
+
+func (p *Peers) Set(s string) error {
+	u, err := url.Parse(s)
+	if err != nil {
+		return err
+	}
+	*p = append(*p, u)
+	return nil
+}
+
+func (p *Peers) String() string {
+	strs := make([]string, 0, len(*p))
+
+	for _, u := range *p {
+		strs = append(strs, u.String())
+	}
+	return strings.Join(strs, " ")
+}
+
 var store *diskstore.Store
+var xors *xor.Store
 
 func main() {
+	setAdditionalFlags()
 	flag.Parse()
 
 	store = &diskstore.Store{
@@ -27,6 +59,13 @@ func main() {
 		Fsync:         *withFsync,
 	}
 	store.Initialize()
+
+	xors = &xor.Store{
+		LayerCount: 6,
+		LayerDepth: 4,
+		Path:       *cacheDir,
+	}
+	xors.Initialize()
 
 	http.HandleFunc("/blob/", convreq.Wrap(func(r *http.Request) convreq.HttpResponse {
 		return handleGetBlob(r, true)

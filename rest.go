@@ -9,9 +9,10 @@ import (
 
 	"github.com/Jille/convreq"
 	"github.com/Jille/convreq/respond"
+	"github.com/bertha/streisand/consts"
 )
 
-type Hash [32]byte
+type Hash [consts.BytesPerHash]byte
 
 func (h *Hash) UnmarshalText(text []byte) error {
 	return nil
