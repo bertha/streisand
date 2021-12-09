@@ -59,6 +59,9 @@ func handleGetBlob(r *http.Request) convreq.HttpResponse {
 	}
 	hdrs := http.Header{}
 	hdrs.Set("Content-Length", fmt.Sprint(st.Size()))
+	hdrs.Set("Last-Modified", st.ModTime().UTC().Format(http.TimeFormat))
+	hdrs.Set("Etag", fmt.Sprintf(`"%s"`, hex.EncodeToString(hash[:])))
+	hdrs.Set("Cache-Control", "max-age=604800, immutable, stale-if-error=604800")
 	return respond.WithHeaders(respond.Reader(fh), hdrs)
 }
 
