@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/Jille/convreq"
@@ -9,6 +11,7 @@ import (
 )
 
 var (
+	port      = flag.Int("port", 8080, "HTTP port to serve on")
 	dataDir   = flag.String("datadir", "", "Path to datadir")
 	withFsync = flag.Bool("with-fsync", false, "Whether to fsync newly written blobs")
 )
@@ -32,5 +35,6 @@ func main() {
 	http.HandleFunc("/query", func(w http.ResponseWriter, r *http.Request) {
 	})
 
-	http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
+	log.Fatal(err)
 }
