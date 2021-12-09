@@ -1,17 +1,16 @@
 package main
 
 type PrefixQuery struct {
-    Prefix Prefix
-    Depth uint
+	Prefix Prefix
+	Depth  uint
 }
 
 type Query struct {
-    Got []Hash
-    Prefixes []PrefixQuery
+	Got      []Hash
+	Prefixes []PrefixQuery
 }
 
 type QueryResponse struct {
-    Got []bool
-    Prefixes []map[int]Hash
+	Got      []bool
+	Prefixes []map[int]Hash
 }
-
