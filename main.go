@@ -35,6 +35,7 @@ func main() {
 		return handleGetBlob(r, false)
 	}))
 	http.HandleFunc("/upload", convreq.Wrap(handlePostBlob))
+	http.HandleFunc("/internal/upload", convreq.Wrap(handleInternalPostBlob))
 	http.HandleFunc("/list", convreq.Wrap(handleGetList))
 	http.HandleFunc("/query", func(w http.ResponseWriter, r *http.Request) {
 	})
