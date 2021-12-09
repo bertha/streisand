@@ -42,15 +42,16 @@ func httpPathToHash(path string) (Hash, bool) {
 	return ret, true
 }
 
-func handleGetBlob(r *http.Request) convreq.HttpResponse {
+func handleGetBlob(r *http.Request, allowForward bool) convreq.HttpResponse {
 	hash, ok := httpPathToHash(r.URL.Path)
 	if !ok {
 		return respond.BadRequest("invalid hash")
 	}
 	fh, err := store.Get(hash[:])
 	if os.IsNotExist(err) {
-		// TODO try with another
-		//
+		if allowForward {
+			// TODO try with another
+		}
 		return respond.NotFound("blob not found")
 	}
 	st, err := fh.Stat()

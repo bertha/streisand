@@ -28,8 +28,12 @@ func main() {
 	}
 	store.Initialize()
 
-	// TODO lees config
-	http.HandleFunc("/blob/", convreq.Wrap(handleGetBlob))
+	http.HandleFunc("/blob/", convreq.Wrap(func(r *http.Request) convreq.HttpResponse {
+		return handleGetBlob(r, true)
+	}))
+	http.HandleFunc("/internal/blob/", convreq.Wrap(func(r *http.Request) convreq.HttpResponse {
+		return handleGetBlob(r, false)
+	}))
 	http.HandleFunc("/upload", convreq.Wrap(handlePostBlob))
 	http.HandleFunc("/list", convreq.Wrap(handleGetList))
 	http.HandleFunc("/query", func(w http.ResponseWriter, r *http.Request) {
