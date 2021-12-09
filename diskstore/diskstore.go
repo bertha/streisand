@@ -208,6 +208,10 @@ func (s *Store) Has(hash []byte) (bool, error) {
 }
 
 func (s *Store) Scan(prefix []byte, bits uint8, callback func(hash []byte)) error {
+	base := s.Path
+	if base == "" {
+		base = "."
+	}
 	bitsAtDepth := make([]uint8, len(s.BitsPerFolder), len(s.BitsPerFolder)+1)
 	var sum uint8
 	for i, b := range s.BitsPerFolder {
@@ -216,13 +220,13 @@ func (s *Store) Scan(prefix []byte, bits uint8, callback func(hash []byte)) erro
 	}
 	bitsAtDepth = append(bitsAtDepth, bits)
 	wd := func(path string, d fs.DirEntry, err error) error {
-		if path == s.Path {
-			return nil
-		}
 		if err != nil {
 			return err
 		}
-		path, err = filepath.Rel(s.Path, path)
+		if path == base {
+			return nil
+		}
+		path, err = filepath.Rel(base, path)
 		if err != nil {
 			return err
 		}
@@ -251,7 +255,7 @@ func (s *Store) Scan(prefix []byte, bits uint8, callback func(hash []byte)) erro
 		}
 		return nil
 	}
-	return filepath.WalkDir(s.Path, wd)
+	return filepath.WalkDir(base, wd)
 }
 
 func compareBits(a, b []byte, bits uint8) bool {
