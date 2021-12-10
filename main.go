@@ -65,7 +65,9 @@ func main() {
 		LayerDepth: 4,
 		Path:       *cacheDir,
 	}
-	xors.Initialize()
+	if err := xors.Initialize(); err != nil {
+		log.Fatal(err)
+	}
 
 	http.HandleFunc("/blob/", convreq.Wrap(func(r *http.Request) convreq.HttpResponse {
 		return handleGetBlob(r, true)

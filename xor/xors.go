@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Jille/errchain"
 	"github.com/bertha/streisand/consts"
+	"log"
 	"os"
 	"path"
 	"syscall"
@@ -18,17 +19,17 @@ type Store struct {
 }
 
 func (s *Store) Initialize() (err error) {
-
 	s.layers = make([]Layer, s.LayerCount)
 	for i := range s.layers {
+
 		layerName := fmt.Sprintf("xors-%d-layer-%d", s.LayerDepth, i)
 		s.layers[i] = Layer{
 			Path:     path.Join(s.Path, layerName),
-			XorCount: i * s.LayerDepth << 2,
+			XorCount: 1 << ((i + 1) * s.LayerDepth),
 		}
 		err = s.layers[i].Initialize()
 		if err != nil {
-			return
+			return fmt.Errorf("init layer %d: %w", i, err)
 		}
 	}
 
@@ -60,12 +61,13 @@ func (l *Layer) Initialize() (err error) {
 
 	// check the file has the correct size, or, when it has size 0,
 	// truncate the file to the correct size.
-	expectedSize := l.XorCount * consts.BytesPerHash
+	expectedSize := pagesizemult(l.XorCount * consts.BytesPerHash)
 
 	fi, err := l.file.Stat()
 	if err != nil {
 		return err
 	}
+
 	if size := fi.Size(); size != int64(expectedSize) {
 		if size != 0 {
 			// might be a misconfiguration, so let's not
@@ -76,6 +78,8 @@ func (l *Layer) Initialize() (err error) {
 		}
 
 		// file was probably just created, so let us fix its size
+		log.Printf("truncating %v to %d", l.Path, expectedSize)
+
 		if err := l.file.Truncate(int64(expectedSize)); err != nil {
 			return err
 		}
@@ -96,7 +100,7 @@ func (l *Layer) Initialize() (err error) {
 		syscall.MAP_SHARED, // carry changes to the underlying file
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("mmap: %w", err)
 	}
 
 	return
@@ -109,4 +113,14 @@ func (l *Layer) Close() (err error) {
 	errchain.Call(&err, l.file.Close)
 
 	return
+}
+
+var pagesize = os.Getpagesize()
+
+func pagesizemult(size int) int {
+	pagecount := size / pagesize
+	if size%pagesize > 0 {
+		pagecount++
+	}
+	return pagecount * pagesize
 }
