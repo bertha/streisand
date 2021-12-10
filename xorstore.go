@@ -19,6 +19,12 @@ func (s *XorStore) Add(h *Hash) {
 	}
 }
 
+func (s *XorStore) GetLeaf(h *Hash) Hash {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.layers[len(s.layers)-1].Get(h)
+}
+
 type XorStore struct {
 	LayerCount int
 	LayerDepth int
@@ -26,6 +32,10 @@ type XorStore struct {
 
 	layers []Layer
 	mutex  sync.RWMutex
+}
+
+func (s *XorStore) Depth() int {
+	return s.LayerCount * s.LayerDepth
 }
 
 func (s *XorStore) Initialize() (err error) {
@@ -137,6 +147,11 @@ func (l *Layer) Close() (err error) {
 func (l *Layer) Add(h *Hash) {
 	idx := BytesPerHash * h.PrefixToNumber(l.PrefixLength)
 	h.XorInto(l.mmap[idx : idx+BytesPerHash])
+}
+
+func (l *Layer) Get(h *Hash) Hash {
+	idx := BytesPerHash * h.PrefixToNumber(l.PrefixLength)
+	return *(*Hash)(l.mmap[idx : idx+BytesPerHash])
 }
 
 var pagesize = os.Getpagesize()

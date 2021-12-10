@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/hex"
 	"io"
 	"net/http"
@@ -33,6 +34,9 @@ func handleInternalPostBlob(r *http.Request) convreq.HttpResponse {
 		return respond.Error(err)
 	}
 	if has {
+
+		go CheckXorsumOf(&h) // TODO: handle err
+
 		// TODO: See if there's a better code than HTTP 409 Conflict.
 		return respond.OverrideResponseCode(respond.String("already exists"), 409)
 	}
@@ -68,5 +72,25 @@ func Post(blob io.ReadCloser) (hash []byte, err error) {
 		xors.Add((*Hash)(hash))
 	}
 
+	return
+}
+
+func CheckXorsumOf(h *Hash) (err error) {
+	var computedXorsum []byte
+	storedXorsum := xors.GetLeaf(h)
+
+	err = store.Scan((*h)[:], (uint8)(xors.Depth()), func(hash []byte) {
+		(*Hash)(hash).XorInto(computedXorsum)
+	})
+	if err != nil {
+		return err
+	}
+
+	if bytes.Compare(computedXorsum, storedXorsum[:]) == 0 {
+		// all OK
+		return
+	}
+
+	// TODO: correct
 	return
 }
