@@ -12,21 +12,11 @@ import (
 func handlePostBlob(r *http.Request) convreq.HttpResponse {
 	// TODO: Simultaneously sync it to peers.
 
-	w, err := store.NewWriter()
+	hash, err := Post(r.Body)
 	if err != nil {
-		return respond.Error(err)
+		respond.Error(err)
 	}
-	defer w.Abort()
-	if _, err := io.Copy(w, r.Body); err != nil {
-		return respond.Error(err)
-	}
-	if err := r.Body.Close(); err != nil {
-		return respond.Error(err)
-	}
-	if err := w.Close(); err != nil {
-		return respond.Error(err)
-	}
-	return respond.String(hex.EncodeToString(w.Hash()))
+	return respond.String(hex.EncodeToString(hash))
 }
 
 func handleInternalPostBlob(r *http.Request) convreq.HttpResponse {
@@ -47,19 +37,34 @@ func handleInternalPostBlob(r *http.Request) convreq.HttpResponse {
 		return respond.OverrideResponseCode(respond.String("already exists"), 409)
 	}
 
+	hash, err := Post(r.Body)
+	if err != nil {
+		respond.Error(err)
+	}
+	return respond.String(hex.EncodeToString(hash))
+}
+
+func Post(blob io.ReadCloser) (hash []byte, err error) {
 	w, err := store.NewWriter()
 	if err != nil {
-		return respond.Error(err)
+		return
 	}
 	defer w.Abort()
-	if _, err := io.Copy(w, r.Body); err != nil {
-		return respond.Error(err)
+
+	if _, err = io.Copy(w, blob); err != nil {
+		return
 	}
-	if err := r.Body.Close(); err != nil {
-		return respond.Error(err)
+
+	if err = blob.Close(); err != nil {
+		return
 	}
-	if err := w.Close(); err != nil {
-		return respond.Error(err)
+	if err = w.Close(); err != nil {
+		return
 	}
-	return respond.String(hex.EncodeToString(w.Hash()))
+
+	hash = w.Hash()
+
+	xors.Add((*Hash)(hash))
+
+	return
 }

@@ -9,6 +9,12 @@ import (
 	"syscall"
 )
 
+func (s *XorStore) Add(h *Hash) {
+	for i := range s.layers {
+		s.layers[i].Add(h)
+	}
+}
+
 type XorStore struct {
 	LayerCount int
 	LayerDepth int
@@ -23,8 +29,8 @@ func (s *XorStore) Initialize() (err error) {
 
 		layerName := fmt.Sprintf("xors-%d-layer-%d", s.LayerDepth, i)
 		s.layers[i] = Layer{
-			Path:     path.Join(s.Path, layerName),
-			XorCount: 1 << ((i + 1) * s.LayerDepth),
+			Path:         path.Join(s.Path, layerName),
+			PrefixLength: uint((i + 1) * s.LayerDepth),
 		}
 		err = s.layers[i].Initialize()
 		if err != nil {
@@ -43,14 +49,19 @@ func (s *XorStore) Close() (err error) {
 }
 
 type Layer struct {
-	Path     string
-	XorCount int // number of 32-byte hashes
+	Path         string
+	PrefixLength uint
 
 	file *os.File
 	mmap []byte
 }
 
 func (l *Layer) Initialize() (err error) {
+	if l.PrefixLength > 32 {
+		return fmt.Errorf("prefix length too great:  %d > 32",
+			l.PrefixLength)
+	}
+
 	// open or create the file that holds the xors of this layer
 	l.file, err = os.OpenFile(l.Path,
 		os.O_RDWR|os.O_CREATE, 0644)
@@ -60,7 +71,8 @@ func (l *Layer) Initialize() (err error) {
 
 	// check the file has the correct size, or, when it has size 0,
 	// truncate the file to the correct size.
-	expectedSize := pagesizemult(l.XorCount * BytesPerHash)
+	xorCount := 1 << l.PrefixLength
+	expectedSize := pagesizemult(xorCount * BytesPerHash)
 
 	fi, err := l.file.Stat()
 	if err != nil {
@@ -112,6 +124,11 @@ func (l *Layer) Close() (err error) {
 	errchain.Call(&err, l.file.Close)
 
 	return
+}
+
+func (l *Layer) Add(h *Hash) {
+	idx := BytesPerHash * h.PrefixToNumber(l.PrefixLength)
+	h.XorInto(l.mmap[idx : idx+BytesPerHash])
 }
 
 var pagesize = os.Getpagesize()

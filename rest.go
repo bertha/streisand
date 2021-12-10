@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -25,6 +26,21 @@ func (h *Hash) MarshalText() ([]byte, error) {
 
 func (h *Hash) String() {
 	hex.EncodeToString(h[:])
+}
+
+func (h *Hash) XorInto(s []byte) {
+	if len(s) != BytesPerHash {
+		panic("xoring hash into slice of incorrect size")
+	}
+	// TODO:  optimize?
+	for i := 0; i < BytesPerHash; i++ {
+		s[i] ^= h[i]
+	}
+}
+
+func (h *Hash) PrefixToNumber(prefixLength uint) uint32 {
+	p32 := binary.BigEndian.Uint32(h[0:4])
+	return p32 >> (32 - prefixLength)
 }
 
 type Prefix struct {
