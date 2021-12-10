@@ -151,8 +151,10 @@ func (w *Writer) Close() error {
 
 	w.newlyWritten = true
 	w.needsRemoval = false
-	if err := syncDir(filepath.Dir(fullPath)); err != nil {
-		return err
+	if w.s.Fsync {
+		if err := syncDir(filepath.Dir(fullPath)); err != nil {
+			return err
+		}
 	}
 	w.result = sum
 	return nil

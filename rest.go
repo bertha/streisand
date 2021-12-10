@@ -61,6 +61,9 @@ func httpPathToHash(path string) (Hash, bool) {
 }
 
 func handleGetBlob(r *http.Request, allowForward bool) convreq.HttpResponse {
+	if r.Method != "GET" {
+		return respond.MethodNotAllowed("Method Not Allowed")
+	}
 	hash, ok := httpPathToHash(r.URL.Path)
 	if !ok {
 		return respond.BadRequest("invalid hash")
@@ -85,6 +88,9 @@ func handleGetBlob(r *http.Request, allowForward bool) convreq.HttpResponse {
 }
 
 func handleGetList(r *http.Request) convreq.HttpResponse {
+	if r.Method != "GET" {
+		return respond.MethodNotAllowed("Method Not Allowed")
+	}
 	var ret []string
 	if err := store.Scan([]byte("1d"), 0, func(h []byte) {
 		ret = append(ret, hex.EncodeToString(h))

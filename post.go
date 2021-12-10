@@ -11,6 +11,9 @@ import (
 )
 
 func handlePostBlob(r *http.Request) convreq.HttpResponse {
+	if r.Method != "POST" {
+		return respond.MethodNotAllowed("Method Not Allowed")
+	}
 	// TODO: Simultaneously sync it to peers.
 
 	hash, err := Post(r.Body)
@@ -21,6 +24,9 @@ func handlePostBlob(r *http.Request) convreq.HttpResponse {
 }
 
 func handleInternalPostBlob(r *http.Request) convreq.HttpResponse {
+	if r.Method != "POST" {
+		return respond.MethodNotAllowed("Method Not Allowed")
+	}
 	var h Hash
 	n, err := hex.Decode(h[:], []byte(r.Header.Get("X-StreiSANd-Hash")))
 	if err != nil {
