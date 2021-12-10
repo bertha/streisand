@@ -91,11 +91,12 @@ func (s *Store) NewWriter() (*Writer, error) {
 }
 
 type Writer struct {
-	s      *Store
-	fh     *os.File
-	hasher hash.Hash
-	mw     io.Writer
-	result []byte
+	s            *Store
+	fh           *os.File
+	hasher       hash.Hash
+	mw           io.Writer
+	result       []byte
+	newlyWritten bool
 
 	needsClosing bool
 	needsRemoval bool
@@ -148,6 +149,7 @@ func (w *Writer) Close() error {
 		}
 	}
 
+	w.newlyWritten = true
 	w.needsRemoval = false
 	if err := syncDir(filepath.Dir(fullPath)); err != nil {
 		return err
@@ -161,6 +163,13 @@ func (w *Writer) Hash() []byte {
 		panic("blobstorage.Writer.Hash() called without successful Close()")
 	}
 	return w.result
+}
+
+func (w *Writer) IsNew() bool {
+	if w.result == nil {
+		panic("blobstorage.Writer.IsNew() called without successful Close()")
+	}
+	return w.newlyWritten
 }
 
 func (w *Writer) Abort() {

@@ -82,5 +82,8 @@ func pullBlob(target string, hash []byte) error {
 	if bytes.Compare(hash, w.Hash()) != 0 {
 		return fmt.Errorf("remote returned incorrect file: want %q, got %q", hex.EncodeToString(hash), hex.EncodeToString(w.Hash()))
 	}
+	if w.IsNew() {
+		xors.Add((*Hash)(hash))
+	}
 	return nil
 }
