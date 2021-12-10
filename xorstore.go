@@ -1,16 +1,15 @@
-package xor
+package main
 
 import (
 	"fmt"
 	"github.com/Jille/errchain"
-	"github.com/bertha/streisand/consts"
 	"log"
 	"os"
 	"path"
 	"syscall"
 )
 
-type Store struct {
+type XorStore struct {
 	LayerCount int
 	LayerDepth int
 	Path       string
@@ -18,7 +17,7 @@ type Store struct {
 	layers []Layer
 }
 
-func (s *Store) Initialize() (err error) {
+func (s *XorStore) Initialize() (err error) {
 	s.layers = make([]Layer, s.LayerCount)
 	for i := range s.layers {
 
@@ -36,7 +35,7 @@ func (s *Store) Initialize() (err error) {
 	return
 }
 
-func (s *Store) Close() (err error) {
+func (s *XorStore) Close() (err error) {
 	for _, layer := range s.layers {
 		errchain.Call(&err, layer.Close)
 	}
@@ -61,7 +60,7 @@ func (l *Layer) Initialize() (err error) {
 
 	// check the file has the correct size, or, when it has size 0,
 	// truncate the file to the correct size.
-	expectedSize := pagesizemult(l.XorCount * consts.BytesPerHash)
+	expectedSize := pagesizemult(l.XorCount * BytesPerHash)
 
 	fi, err := l.file.Stat()
 	if err != nil {

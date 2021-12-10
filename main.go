@@ -10,7 +10,6 @@ import (
 
 	"github.com/Jille/convreq"
 	"github.com/bertha/streisand/diskstore"
-	"github.com/bertha/streisand/xor"
 )
 
 var (
@@ -47,7 +46,7 @@ func (p *Peers) String() string {
 }
 
 var store *diskstore.Store
-var xors *xor.Store
+var xors *XorStore
 
 func main() {
 	setAdditionalFlags()
@@ -60,7 +59,7 @@ func main() {
 	}
 	store.Initialize()
 
-	xors = &xor.Store{
+	xors = &XorStore{
 		LayerCount: 6,
 		LayerDepth: 4,
 		Path:       *cacheDir,
