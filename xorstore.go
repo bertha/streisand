@@ -6,10 +6,14 @@ import (
 	"log"
 	"os"
 	"path"
+	"sync"
 	"syscall"
 )
 
 func (s *XorStore) Add(h *Hash) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	for i := range s.layers {
 		s.layers[i].Add(h)
 	}
@@ -21,6 +25,7 @@ type XorStore struct {
 	Path       string
 
 	layers []Layer
+	mutex  sync.RWMutex
 }
 
 func (s *XorStore) Initialize() (err error) {
@@ -42,6 +47,9 @@ func (s *XorStore) Initialize() (err error) {
 }
 
 func (s *XorStore) Close() (err error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	for _, layer := range s.layers {
 		errchain.Call(&err, layer.Close)
 	}

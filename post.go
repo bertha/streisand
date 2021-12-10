@@ -64,6 +64,7 @@ func Post(blob io.ReadCloser) (hash []byte, err error) {
 
 	hash = w.Hash()
 
+	// TODO: don't post when hash existed before Post
 	xors.Add((*Hash)(hash))
 
 	return
