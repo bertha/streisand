@@ -111,7 +111,7 @@ func checkXorsumOf(h *Hash) (err error) {
 	storedXorsum := xors.GetLeaf_AlreadyLocked(h)
 	var computedXorsum Hash
 
-	if err := store.Scan((*h)[:], (uint8)(xors.Depth()),
+	if err := store.Scan(h[:], uint8(xors.Depth()),
 		func(hash []byte) {
 			(*Hash)(hash).XorInto(computedXorsum[:])
 		}); err != nil {

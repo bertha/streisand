@@ -49,7 +49,7 @@ func (h *Hash) Xor(other *Hash) Hash {
 }
 
 func (h *Hash) Equals(other *Hash) bool {
-	return bytes.Compare((*h)[:], (*other)[:]) == 0
+	return bytes.Compare(h[:], other[:]) == 0
 }
 
 var zeroHash Hash
