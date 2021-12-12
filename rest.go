@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,7 +18,8 @@ const BytesPerHash = 32
 type Hash [BytesPerHash]byte
 
 func (h *Hash) UnmarshalText(text []byte) error {
-	return nil
+	// TODO: Implement
+	return errors.New("UnmarshalText is not yet implemented")
 }
 
 func (h *Hash) MarshalText() ([]byte, error) {

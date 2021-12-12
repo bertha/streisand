@@ -125,6 +125,7 @@ func (w *Writer) Close() error {
 		return err
 	}
 	w.needsClosing = false
+	// TODO: Add synchronization in case the directories were just created and haven't been synced yet.
 	if err := os.Rename(w.fh.Name(), fullPath); err != nil {
 		// Create parent directories first.
 		p := w.s.Path
