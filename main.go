@@ -18,6 +18,7 @@ var (
 	cacheDir  = flag.String("cachedir", "", "Path to the cache directory")
 	withFsync = flag.Bool("with-fsync", false,
 		"Whether to fsync newly written blobs")
+	debug = flag.Bool("debug", false, "Enables some debugging features")
 	peers Peers
 )
 
@@ -47,6 +48,17 @@ func (p *Peers) String() string {
 
 var store *diskstore.Store
 var xors *XorStore
+
+// Lock protects store and xors
+func Lock() {
+	xors.Lock()
+	// TODO: lock diskstore
+}
+
+func Unlock() {
+	xors.Unlock()
+	// TODO: unlock diskstore
+}
 
 func main() {
 	setAdditionalFlags()
@@ -79,6 +91,11 @@ func main() {
 	http.HandleFunc("/list", convreq.Wrap(handleGetList))
 	http.HandleFunc("/query", func(w http.ResponseWriter, r *http.Request) {
 	})
+
+	if *debug {
+		http.HandleFunc("/debug/add-xor",
+			convreq.Wrap(handleDebugAddXor))
+	}
 
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	log.Fatal(err)

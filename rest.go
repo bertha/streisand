@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -24,8 +26,8 @@ func (h *Hash) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(h[:])), nil
 }
 
-func (h *Hash) String() {
-	hex.EncodeToString(h[:])
+func (h *Hash) String() string {
+	return hex.EncodeToString(h[:])
 }
 
 func (h *Hash) XorInto(s []byte) {
@@ -36,6 +38,22 @@ func (h *Hash) XorInto(s []byte) {
 	for i := 0; i < BytesPerHash; i++ {
 		s[i] ^= h[i]
 	}
+}
+
+func (h *Hash) Xor(other *Hash) Hash {
+	result := *other
+	h.XorInto(result[:])
+	return result
+}
+
+func (h *Hash) Equals(other *Hash) bool {
+	return bytes.Compare((*h)[:], (*other)[:]) == 0
+}
+
+var zeroHash Hash
+
+func (h *Hash) IsZero() bool {
+	return h.Equals(&zeroHash)
 }
 
 func (h *Hash) PrefixToNumber(prefixLength uint) uint32 {
@@ -98,4 +116,11 @@ func handleGetList(r *http.Request) convreq.HttpResponse {
 		return respond.Error(err)
 	}
 	return respond.String(fmt.Sprintf("%d entries\n", len(ret)) + strings.Join(ret, "\n"))
+}
+
+func warnOnErr(err error, message string, v ...interface{}) {
+	if err == nil {
+		return
+	}
+	log.Printf("warning: %s: %v", fmt.Sprintf(message, v...), err)
 }

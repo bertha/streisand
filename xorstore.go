@@ -14,6 +14,10 @@ func (s *XorStore) Add(h *Hash) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	s.Add_AlreadyLocked(h)
+}
+
+func (s *XorStore) Add_AlreadyLocked(h *Hash) {
 	for i := range s.layers {
 		s.layers[i].Add(h)
 	}
@@ -22,7 +26,20 @@ func (s *XorStore) Add(h *Hash) {
 func (s *XorStore) GetLeaf(h *Hash) Hash {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
+
+	return s.GetLeaf_AlreadyLocked(h)
+}
+
+func (s *XorStore) GetLeaf_AlreadyLocked(h *Hash) Hash {
 	return s.layers[len(s.layers)-1].Get(h)
+}
+
+func (s *XorStore) Lock() {
+	s.mutex.Lock()
+}
+
+func (s *XorStore) Unlock() {
+	s.mutex.Unlock()
 }
 
 type XorStore struct {

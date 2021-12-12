@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"encoding/hex"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/Jille/convreq"
@@ -40,8 +40,8 @@ func handleInternalPostBlob(r *http.Request) convreq.HttpResponse {
 		return respond.Error(err)
 	}
 	if has {
-
-		go CheckXorsumOf(&h) // TODO: handle err
+		go warnOnErr(checkXorsumOf(&h),
+			"checking leaf xorsum of %s", &h)
 
 		// TODO: See if there's a better code than HTTP 409 Conflict.
 		return respond.OverrideResponseCode(respond.String("already exists"), 409)
@@ -81,22 +81,61 @@ func Post(blob io.ReadCloser) (hash []byte, err error) {
 	return
 }
 
-func CheckXorsumOf(h *Hash) (err error) {
-	var computedXorsum []byte
-	storedXorsum := xors.GetLeaf(h)
-
-	err = store.Scan((*h)[:], (uint8)(xors.Depth()), func(hash []byte) {
-		(*Hash)(hash).XorInto(computedXorsum)
-	})
+func handleDebugAddXor(r *http.Request) convreq.HttpResponse {
+	if r.Method != "POST" {
+		return respond.MethodNotAllowed("Method Not Allowed")
+	}
+	var h Hash
+	n, err := hex.Decode(h[:], []byte(r.Header.Get("X-StreiSANd-Hash")))
 	if err != nil {
+		return respond.BadRequest("couldn't decode hash in X-StreiSANd-Hash")
+	}
+	if len(h) != n {
+		return respond.BadRequest("wrong hash length in X-StreiSANd-Hash")
+	}
+	xors.Add(&h)
+	xorsum := xors.GetLeaf(&h)
+	return respond.String(xorsum.String())
+}
+
+func checkXorsumOf(h *Hash) (err error) {
+	if *debug {
+		log.Printf("checking xorsum of %s", h)
+	}
+
+	Lock()
+	defer Unlock()
+
+	// compute the difference between xorsum stored
+	// and the xorsum computed from the disk store
+	storedXorsum := xors.GetLeaf_AlreadyLocked(h)
+	var computedXorsum Hash
+
+	if err := store.Scan((*h)[:], (uint8)(xors.Depth()),
+		func(hash []byte) {
+			(*Hash)(hash).XorInto(computedXorsum[:])
+		}); err != nil {
+
 		return err
 	}
 
-	if bytes.Compare(computedXorsum, storedXorsum[:]) == 0 {
-		// all OK
+	diff := storedXorsum.Xor(&computedXorsum)
+
+	if diff.IsZero() {
+		// all ok
 		return
 	}
 
-	// TODO: correct
+	if diff.Equals(h) {
+		log.Printf("warning: adding missing hash %s to xorsum", h)
+		xors.Add_AlreadyLocked(h)
+		return
+	}
+
+	// something serious is wrong;
+	panic("corrupted xorsum table")
+
+	// TODO: start repairing instead
+
 	return
 }
