@@ -70,7 +70,6 @@ type Layer struct {
 	Path         string
 	PrefixLength uint
 
-	file *os.File
 	mmap []byte
 }
 
@@ -81,8 +80,7 @@ func (l *Layer) Initialize() (err error) {
 	}
 
 	// open or create the file that holds the xors of this layer
-	l.file, err = os.OpenFile(l.Path,
-		os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(l.Path, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -92,7 +90,7 @@ func (l *Layer) Initialize() (err error) {
 	xorCount := 1 << l.PrefixLength
 	expectedSize := pagesizemult(xorCount * BytesPerHash)
 
-	fi, err := l.file.Stat()
+	fi, err := f.Stat()
 	if err != nil {
 		return err
 	}
@@ -109,12 +107,12 @@ func (l *Layer) Initialize() (err error) {
 		// file was probably just created, so let us fix its size
 		log.Printf("truncating %v to %d", l.Path, expectedSize)
 
-		if err := l.file.Truncate(int64(expectedSize)); err != nil {
+		if err := f.Truncate(int64(expectedSize)); err != nil {
 			return err
 		}
 
 		// check truncate worked
-		fi, err = l.file.Stat()
+		fi, err = f.Stat()
 		if err != nil {
 			return err
 		}
@@ -124,7 +122,7 @@ func (l *Layer) Initialize() (err error) {
 		}
 	}
 
-	l.mmap, err = syscall.Mmap(int(l.file.Fd()), 0, expectedSize,
+	l.mmap, err = syscall.Mmap(int(f.Fd()), 0, expectedSize,
 		syscall.PROT_READ|syscall.PROT_WRITE,
 		syscall.MAP_SHARED, // carry changes to the underlying file
 	)
@@ -132,16 +130,16 @@ func (l *Layer) Initialize() (err error) {
 		return fmt.Errorf("mmap: %w", err)
 	}
 
+	// the file needn't be kept open for the mmap to persist
+	if err := f.Close(); err != nil {
+		return err
+	}
+
 	return
 }
 
 func (l *Layer) Close() (err error) {
-	errchain.Call(&err, func() error {
-		return syscall.Munmap(l.mmap)
-	})
-	errchain.Call(&err, l.file.Close)
-
-	return
+	return syscall.Munmap(l.mmap)
 }
 
 func (l *Layer) Add(h *Hash) {
