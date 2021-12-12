@@ -18,7 +18,7 @@ func handlePostBlob(r *http.Request) convreq.HttpResponse {
 
 	hash, err := Post(r.Body)
 	if err != nil {
-		respond.Error(err)
+		return respond.Error(err)
 	}
 	return respond.String(hex.EncodeToString(hash))
 }
@@ -49,7 +49,7 @@ func handleInternalPostBlob(r *http.Request) convreq.HttpResponse {
 
 	hash, err := Post(r.Body)
 	if err != nil {
-		respond.Error(err)
+		return respond.Error(err)
 	}
 	return respond.String(hex.EncodeToString(hash))
 }

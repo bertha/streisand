@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/Jille/errchain"
 	"log"
 	"os"
 	"path/filepath"
 	"sync"
 	"syscall"
+
+	"github.com/Jille/errchain"
 )
 
 func (s *XorStore) Add(h *Hash) {
@@ -90,7 +91,7 @@ type Layer struct {
 	mmap []byte
 }
 
-func (l *Layer) Initialize() (err error) {
+func (l *Layer) Initialize() (retErr error) {
 	if l.PrefixLength > 32 {
 		return fmt.Errorf("prefix length too great:  %d > 32",
 			l.PrefixLength)
@@ -101,6 +102,8 @@ func (l *Layer) Initialize() (err error) {
 	if err != nil {
 		return err
 	}
+	// the file needn't be kept open for the mmap to persist
+	defer errchain.Call(&retErr, f.Close)
 
 	// check the file has the correct size, or, when it has size 0,
 	// truncate the file to the correct size.
@@ -145,11 +148,6 @@ func (l *Layer) Initialize() (err error) {
 	)
 	if err != nil {
 		return fmt.Errorf("mmap: %w", err)
-	}
-
-	// the file needn't be kept open for the mmap to persist
-	if err := f.Close(); err != nil {
-		return err
 	}
 
 	return
