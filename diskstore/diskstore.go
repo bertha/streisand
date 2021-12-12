@@ -273,27 +273,20 @@ func (s *Store) Scan(prefix []byte, bits uint8, callback func(hash []byte)) erro
 func compareBits(a, b []byte, bits uint8) bool {
 	bra := bitio.NewReader(bytes.NewReader(a))
 	brb := bitio.NewReader(bytes.NewReader(b))
-	for bits >= 64 {
-		ba, errA := bra.ReadByte()
-		bb, errB := brb.ReadByte()
-		if errA != nil && errB != nil {
-			return true
-		}
+	for bits > 0 {
+		b := min(64, bits)
+		ba, errA := bra.ReadBits(b)
+		bb, errB := brb.ReadBits(b)
 		if errA != nil || errB != nil {
+			if errA != nil && errB != nil {
+				return true
+			}
 			return false
 		}
 		if ba != bb {
 			return false
 		}
-		bits -= 8
+		bits -= b
 	}
-	ba, errA := bra.ReadBits(uint8(bits))
-	bb, errB := brb.ReadBits(uint8(bits))
-	if errA != nil && errB != nil {
-		return true
-	}
-	if errA != nil || errB != nil {
-		return false
-	}
-	return ba == bb
+	return true
 }
