@@ -5,7 +5,7 @@ import (
 	"github.com/Jille/errchain"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"sync"
 	"syscall"
 )
@@ -44,7 +44,7 @@ func (s *XorStore) Initialize() (err error) {
 
 		layerName := fmt.Sprintf("xors-%d-layer-%d", s.LayerDepth, i)
 		s.layers[i] = Layer{
-			Path:         path.Join(s.Path, layerName),
+			Path:         filepath.Join(s.Path, layerName),
 			PrefixLength: uint((i + 1) * s.LayerDepth),
 		}
 		err = s.layers[i].Initialize()
