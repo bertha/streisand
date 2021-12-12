@@ -70,7 +70,7 @@ type Prefix struct {
 
 func httpPathToHash(path string) (Hash, bool) {
 	var ret Hash
-	n, err := hex.Decode(ret[:], []byte(strings.TrimPrefix(path, "/blob/")))
+	n, err := hex.Decode(ret[:], []byte(strings.TrimPrefix(strings.TrimPrefix(path, "/internal"), "/blob/")))
 	if err != nil {
 		return Hash{}, false
 	}
