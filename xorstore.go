@@ -5,42 +5,19 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sync"
 	"syscall"
 
 	"github.com/Jille/errchain"
 )
 
 func (s *XorStore) Add(h *Hash) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	s.Add_AlreadyLocked(h)
-}
-
-func (s *XorStore) Add_AlreadyLocked(h *Hash) {
 	for i := range s.layers {
 		s.layers[i].Add(h)
 	}
 }
 
 func (s *XorStore) GetLeaf(h *Hash) Hash {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-
-	return s.GetLeaf_AlreadyLocked(h)
-}
-
-func (s *XorStore) GetLeaf_AlreadyLocked(h *Hash) Hash {
 	return s.layers[len(s.layers)-1].Get(h)
-}
-
-func (s *XorStore) Lock() {
-	s.mutex.Lock()
-}
-
-func (s *XorStore) Unlock() {
-	s.mutex.Unlock()
 }
 
 type XorStore struct {
@@ -49,7 +26,6 @@ type XorStore struct {
 	Path       string
 
 	layers []Layer
-	mutex  sync.RWMutex
 }
 
 func (s *XorStore) Depth() int {
@@ -75,9 +51,6 @@ func (s *XorStore) Initialize() (err error) {
 }
 
 func (s *XorStore) Close() (err error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
 	for _, layer := range s.layers {
 		errchain.Call(&err, layer.Close)
 	}

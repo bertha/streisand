@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/Jille/convreq"
 	"github.com/bertha/streisand/diskstore"
@@ -48,17 +49,7 @@ func (p *Peers) String() string {
 
 var store *diskstore.Store
 var xors *XorStore
-
-// Lock protects store and xors
-func Lock() {
-	xors.Lock()
-	// TODO: lock diskstore
-}
-
-func Unlock() {
-	xors.Unlock()
-	// TODO: unlock diskstore
-}
+var mutex sync.RWMutex
 
 func main() {
 	setAdditionalFlags()

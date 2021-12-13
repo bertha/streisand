@@ -88,6 +88,10 @@ func handleGetBlob(r *http.Request, allowForward bool) convreq.HttpResponse {
 	if !ok {
 		return respond.BadRequest("invalid hash")
 	}
+
+	mutex.RLock()
+	defer mutex.RUnlock()
+
 	fh, err := store.Get(hash[:])
 	if os.IsNotExist(err) {
 		if allowForward {
@@ -111,6 +115,10 @@ func handleGetList(r *http.Request) convreq.HttpResponse {
 	if r.Method != "GET" {
 		return respond.MethodNotAllowed("Method Not Allowed")
 	}
+
+	mutex.RLock()
+	defer mutex.RUnlock()
+
 	var ret []string
 	if err := store.Scan([]byte("1d"), 0, func(h []byte) {
 		ret = append(ret, hex.EncodeToString(h))

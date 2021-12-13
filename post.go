@@ -35,18 +35,22 @@ func handleInternalPostBlob(r *http.Request) convreq.HttpResponse {
 	if len(h) != n {
 		return respond.BadRequest("wrong hash length in X-StreiSANd-Hash")
 	}
+
 	has, err := store.Has(h[:])
 	if err != nil {
 		return respond.Error(err)
 	}
 	if has {
-		go warnOnErr(checkXorsumOf(&h),
-			"checking leaf xorsum of %s", &h)
+		go func() {
+			warnOnErr(checkXorsumOf(&h),
+				"checking leaf xorsum of %s", &h)
+		}()
 
 		// TODO: See if there's a better code than HTTP 409 Conflict.
 		return respond.OverrideResponseCode(respond.String("already exists"), 409)
 	}
 
+	// TODO: abort if hash is not equal to h (X-StreiSANd-Hash)
 	hash, err := Post(r.Body)
 	if err != nil {
 		return respond.Error(err)
@@ -65,9 +69,13 @@ func Post(blob io.ReadCloser) (hash []byte, err error) {
 		return
 	}
 
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	if err = blob.Close(); err != nil {
 		return
 	}
+
 	if err = w.Close(); err != nil {
 		return
 	}
@@ -93,6 +101,10 @@ func handleDebugAddXor(r *http.Request) convreq.HttpResponse {
 	if len(h) != n {
 		return respond.BadRequest("wrong hash length in X-StreiSANd-Hash")
 	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	xors.Add(&h)
 	xorsum := xors.GetLeaf(&h)
 	return respond.String(xorsum.String())
@@ -103,12 +115,12 @@ func checkXorsumOf(h *Hash) (err error) {
 		log.Printf("checking xorsum of %s", h)
 	}
 
-	Lock()
-	defer Unlock()
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	// compute the difference between xorsum stored
 	// and the xorsum computed from the disk store
-	storedXorsum := xors.GetLeaf_AlreadyLocked(h)
+	storedXorsum := xors.GetLeaf(h)
 	var computedXorsum Hash
 
 	if err := store.Scan(h[:], uint8(xors.Depth()),
@@ -128,7 +140,7 @@ func checkXorsumOf(h *Hash) (err error) {
 
 	if diff.Equals(h) {
 		log.Printf("warning: adding missing hash %s to xorsum", h)
-		xors.Add_AlreadyLocked(h)
+		xors.Add(h)
 		return
 	}
 
