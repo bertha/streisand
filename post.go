@@ -10,20 +10,20 @@ import (
 	"github.com/Jille/convreq/respond"
 )
 
-func handlePostBlob(r *http.Request) convreq.HttpResponse {
+func (s *server) handlePostBlob(r *http.Request) convreq.HttpResponse {
 	if r.Method != "POST" {
 		return respond.MethodNotAllowed("Method Not Allowed")
 	}
 	// TODO: Simultaneously sync it to peers.
 
-	hash, err := Post(r.Body)
+	hash, err := s.Post(r.Body)
 	if err != nil {
 		return respond.Error(err)
 	}
 	return respond.String(hex.EncodeToString(hash))
 }
 
-func handleInternalPostBlob(r *http.Request) convreq.HttpResponse {
+func (s *server) handleInternalPostBlob(r *http.Request) convreq.HttpResponse {
 	if r.Method != "POST" {
 		return respond.MethodNotAllowed("Method Not Allowed")
 	}
@@ -36,13 +36,13 @@ func handleInternalPostBlob(r *http.Request) convreq.HttpResponse {
 		return respond.BadRequest("wrong hash length in X-StreiSANd-Hash")
 	}
 
-	has, err := store.Has(h[:])
+	has, err := s.store.Has(h[:])
 	if err != nil {
 		return respond.Error(err)
 	}
 	if has {
 		go func() {
-			warnOnErr(checkXorsumOf(&h),
+			warnOnErr(s.checkXorsumOf(&h),
 				"checking leaf xorsum of %s", &h)
 		}()
 
@@ -51,15 +51,15 @@ func handleInternalPostBlob(r *http.Request) convreq.HttpResponse {
 	}
 
 	// TODO: abort if hash is not equal to h (X-StreiSANd-Hash)
-	hash, err := Post(r.Body)
+	hash, err := s.Post(r.Body)
 	if err != nil {
 		return respond.Error(err)
 	}
 	return respond.String(hex.EncodeToString(hash))
 }
 
-func Post(blob io.ReadCloser) (hash []byte, err error) {
-	w, err := store.NewWriter()
+func (s *server) Post(blob io.ReadCloser) (hash []byte, err error) {
+	w, err := s.store.NewWriter()
 	if err != nil {
 		return
 	}
@@ -69,8 +69,8 @@ func Post(blob io.ReadCloser) (hash []byte, err error) {
 		return
 	}
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	if err = blob.Close(); err != nil {
 		return
@@ -83,13 +83,13 @@ func Post(blob io.ReadCloser) (hash []byte, err error) {
 	hash = w.Hash()
 
 	if w.IsNew() {
-		xors.Add((*Hash)(hash))
+		s.xors.Add((*Hash)(hash))
 	}
 
 	return
 }
 
-func handleDebugAddXor(r *http.Request) convreq.HttpResponse {
+func (s *server) handleDebugAddXor(r *http.Request) convreq.HttpResponse {
 	if r.Method != "POST" {
 		return respond.MethodNotAllowed("Method Not Allowed")
 	}
@@ -102,28 +102,28 @@ func handleDebugAddXor(r *http.Request) convreq.HttpResponse {
 		return respond.BadRequest("wrong hash length in X-StreiSANd-Hash")
 	}
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	xors.Add(&h)
-	xorsum := xors.GetLeaf(&h)
+	s.xors.Add(&h)
+	xorsum := s.xors.GetLeaf(&h)
 	return respond.String(xorsum.String())
 }
 
-func checkXorsumOf(h *Hash) (err error) {
-	if *debug {
+func (s *server) checkXorsumOf(h *Hash) (err error) {
+	if s.conf.Debug {
 		log.Printf("checking xorsum of %s", h)
 	}
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	// compute the difference between xorsum stored
 	// and the xorsum computed from the disk store
-	storedXorsum := xors.GetLeaf(h)
+	storedXorsum := s.xors.GetLeaf(h)
 	var computedXorsum Hash
 
-	if err := store.Scan(h[:], uint8(xors.Depth()),
+	if err := s.store.Scan(h[:], uint8(s.xors.Depth()),
 		func(hash []byte) {
 			(*Hash)(hash).XorInto(computedXorsum[:])
 		}); err != nil {
@@ -140,7 +140,7 @@ func checkXorsumOf(h *Hash) (err error) {
 
 	if diff.Equals(h) {
 		log.Printf("warning: adding missing hash %s to xorsum", h)
-		xors.Add(h)
+		s.xors.Add(h)
 		return
 	}
 

@@ -80,7 +80,9 @@ func httpPathToHash(path string) (Hash, bool) {
 	return ret, true
 }
 
-func handleGetBlob(r *http.Request, allowForward bool) convreq.HttpResponse {
+func (s *server) handleGetBlob(
+	r *http.Request, allowForward bool) convreq.HttpResponse {
+
 	if r.Method != "GET" {
 		return respond.MethodNotAllowed("Method Not Allowed")
 	}
@@ -89,10 +91,10 @@ func handleGetBlob(r *http.Request, allowForward bool) convreq.HttpResponse {
 		return respond.BadRequest("invalid hash")
 	}
 
-	mutex.RLock()
-	defer mutex.RUnlock()
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
-	fh, err := store.Get(hash[:])
+	fh, err := s.store.Get(hash[:])
 	if os.IsNotExist(err) {
 		if allowForward {
 			// TODO try with another
@@ -111,16 +113,16 @@ func handleGetBlob(r *http.Request, allowForward bool) convreq.HttpResponse {
 	return respond.WithHeaders(respond.Reader(fh), hdrs)
 }
 
-func handleGetList(r *http.Request) convreq.HttpResponse {
+func (s *server) handleGetList(r *http.Request) convreq.HttpResponse {
 	if r.Method != "GET" {
 		return respond.MethodNotAllowed("Method Not Allowed")
 	}
 
-	mutex.RLock()
-	defer mutex.RUnlock()
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
 	var ret []string
-	if err := store.Scan([]byte("1d"), 0, func(h []byte) {
+	if err := s.store.Scan([]byte("1d"), 0, func(h []byte) {
 		ret = append(ret, hex.EncodeToString(h))
 	}); err != nil {
 		return respond.Error(err)

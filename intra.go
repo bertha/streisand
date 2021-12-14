@@ -12,10 +12,10 @@ import (
 
 // pushBlob sends a blob to a target server (given as host:port)
 // Passing in an fh is optional, but if you do, it will be closed before returning.
-func pushBlob(target string, hash []byte, fh *os.File) error {
+func (s *server) pushBlob(target string, hash []byte, fh *os.File) error {
 	if fh == nil {
 		var err error
-		fh, err = store.Get(hash)
+		fh, err = s.store.Get(hash)
 		if err != nil {
 			return err
 		}
@@ -47,7 +47,7 @@ func pushBlob(target string, hash []byte, fh *os.File) error {
 	return nil
 }
 
-func pullBlob(target string, hash []byte) error {
+func (s *server) pullBlob(target string, hash []byte) error {
 	u := url.URL{
 		Scheme: "http",
 		Host:   target,
@@ -65,7 +65,7 @@ func pullBlob(target string, hash []byte) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("HTTP error: %s", resp.Status)
 	}
-	w, err := store.NewWriter()
+	w, err := s.store.NewWriter()
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func pullBlob(target string, hash []byte) error {
 		return fmt.Errorf("remote returned incorrect file: want %q, got %q", hex.EncodeToString(hash), hex.EncodeToString(w.Hash()))
 	}
 	if w.IsNew() {
-		xors.Add((*Hash)(hash))
+		s.xors.Add((*Hash)(hash))
 	}
 	return nil
 }
