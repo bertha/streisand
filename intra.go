@@ -13,6 +13,7 @@ import (
 // pushBlob sends a blob to a target server (given as host:port)
 // Passing in an fh is optional, but if you do, it will be closed before returning.
 func (s *server) pushBlob(target string, hash []byte, fh *os.File) error {
+	// TODO: locking
 	if fh == nil {
 		var err error
 		fh, err = s.store.Get(hash)
@@ -76,6 +77,10 @@ func (s *server) pullBlob(target string, hash []byte) error {
 	if err := resp.Body.Close(); err != nil {
 		return err
 	}
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if err := w.Close(); err != nil {
 		return err
 	}
