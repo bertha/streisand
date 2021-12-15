@@ -1,29 +1,30 @@
-package main
+package streisand
 
 import (
+	"io"
 	"net/http"
 	"net/url"
 	"sync"
 
 	"github.com/Jille/convreq"
+	"github.com/Jille/errchain"
 	"github.com/bertha/streisand/diskstore"
 )
 
 type Server interface {
-	Run() error
+	io.Closer
+
+	Handler() http.Handler
 }
 
 type ServerConfig struct {
 	DataDir, CacheDir string
 	WithFsync         bool
-	Addr              string
 	Debug             bool
-	Peers             []*url.URL
+	GetPeers          func() ([]*url.URL, error)
 }
 
 func NewServer(conf ServerConfig) (Server, error) {
-	hmux := http.NewServeMux()
-
 	s := server{
 		conf: conf,
 		store: &diskstore.Store{
@@ -36,10 +37,7 @@ func NewServer(conf ServerConfig) (Server, error) {
 			LayerDepth: 4,
 			Path:       conf.CacheDir,
 		},
-		httpServer: &http.Server{
-			Addr:    conf.Addr,
-			Handler: hmux,
-		},
+		hmux: http.NewServeMux(),
 	}
 
 	s.store.Initialize()
@@ -48,20 +46,20 @@ func NewServer(conf ServerConfig) (Server, error) {
 		return nil, err
 	}
 
-	hmux.HandleFunc("/blob/", convreq.Wrap(func(r *http.Request) convreq.HttpResponse {
+	s.hmux.HandleFunc("/blob/", convreq.Wrap(func(r *http.Request) convreq.HttpResponse {
 		return s.handleGetBlob(r, true)
 	}))
-	hmux.HandleFunc("/internal/blob/", convreq.Wrap(func(r *http.Request) convreq.HttpResponse {
+	s.hmux.HandleFunc("/internal/blob/", convreq.Wrap(func(r *http.Request) convreq.HttpResponse {
 		return s.handleGetBlob(r, false)
 	}))
-	hmux.HandleFunc("/upload", convreq.Wrap(s.handlePostBlob))
-	http.HandleFunc("/internal/upload", convreq.Wrap(s.handleInternalPostBlob))
-	hmux.HandleFunc("/list", convreq.Wrap(s.handleGetList))
-	hmux.HandleFunc("/query", func(w http.ResponseWriter, r *http.Request) {
+	s.hmux.HandleFunc("/upload", convreq.Wrap(s.handlePostBlob))
+	s.hmux.HandleFunc("/internal/upload", convreq.Wrap(s.handleInternalPostBlob))
+	s.hmux.HandleFunc("/list", convreq.Wrap(s.handleGetList))
+	s.hmux.HandleFunc("/query", func(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if s.conf.Debug {
-		hmux.HandleFunc("/debug/add-xor",
+		s.hmux.HandleFunc("/debug/add-xor",
 			convreq.Wrap(s.handleDebugAddXor))
 	}
 
@@ -71,12 +69,21 @@ func NewServer(conf ServerConfig) (Server, error) {
 type server struct {
 	conf ServerConfig
 
-	store      *diskstore.Store
-	xors       *XorStore
-	mutex      sync.RWMutex
-	httpServer *http.Server
+	store *diskstore.Store
+	xors  *XorStore
+	mutex sync.RWMutex
+	hmux  *http.ServeMux
 }
 
-func (s *server) Run() error {
-	return s.httpServer.ListenAndServe()
+func (s *server) Close() (err error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	errchain.Call(&err, s.xors.Close)
+
+	return err
+}
+
+func (s *server) Handler() http.Handler {
+	return s.hmux
 }

@@ -1,4 +1,4 @@
-package main
+package streisand
 
 import (
 	"encoding/hex"

@@ -1,4 +1,4 @@
-package main
+package streisand
 
 type Notification struct {
 	XorsIGot           []XorTeabag
