@@ -8,7 +8,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 )
+
+func init() {
+	// We know that the only server we send Expect:100-continue to is ourselves, so there's no need for this fallback for servers which don't support it properly.
+	// This prevents us from unintentionally sending an internal put to an overloaded server which didn't respond in 1s.
+	http.DefaultTransport.(*http.Transport).ExpectContinueTimeout = 30 * time.Second
+}
 
 // pushBlob sends a blob to a target server (given as host:port)
 // Passing in an fh is optional, but if you do, it will be closed before returning.
