@@ -12,9 +12,8 @@ import (
 )
 
 type Server interface {
+	http.Handler
 	io.Closer
-
-	Handler() http.Handler
 }
 
 type PeersFunc func() ([]*url.URL, error)
@@ -86,6 +85,6 @@ func (s *server) Close() (err error) {
 	return err
 }
 
-func (s *server) Handler() http.Handler {
-	return s.hmux
+func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.hmux.ServeHTTP(w, r)
 }

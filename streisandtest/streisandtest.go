@@ -5,7 +5,6 @@ import (
 	"github.com/bertha/streisand"
 	"net/http/httptest"
 	"net/url"
-	"os"
 )
 
 type Server struct {
@@ -37,7 +36,7 @@ func NewServer(getPeers streisand.PeersFunc,
 	}
 	s := &Server{
 		Streisand: ss,
-		Http:      httptest.NewServer(ss.Handler()),
+		Http:      httptest.NewServer(ss),
 		DataDir:   conf.DataDir,
 		CacheDir:  conf.CacheDir,
 	}
