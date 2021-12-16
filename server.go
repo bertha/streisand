@@ -17,11 +17,13 @@ type Server interface {
 	Handler() http.Handler
 }
 
+type PeersFunc func() ([]*url.URL, error)
+
 type ServerConfig struct {
 	DataDir, CacheDir string
 	WithFsync         bool
 	Debug             bool
-	GetPeers          func() ([]*url.URL, error)
+	GetPeers          PeersFunc
 }
 
 func NewServer(conf ServerConfig) (Server, error) {

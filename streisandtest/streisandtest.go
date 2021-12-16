@@ -18,7 +18,9 @@ type Servers struct {
 	Servers []*Server
 }
 
-func NewServer(getPeers func() ([]*url.URL, error)) (*Server, error) {
+func NewServer(getPeers streisand.PeersFunc,
+	tempDir func() string) (*Server, error) {
+
 	var err error
 	conf := streisand.ServerConfig{
 		WithFsync: true,
@@ -26,14 +28,8 @@ func NewServer(getPeers func() ([]*url.URL, error)) (*Server, error) {
 		GetPeers:  getPeers,
 	}
 
-	conf.DataDir, err = os.MkdirTemp("", "streisandtest")
-	if err != nil {
-		return nil, err
-	}
-	conf.CacheDir, err = os.MkdirTemp("", "streisandtest")
-	if err != nil {
-		return nil, err
-	}
+	conf.DataDir = tempDir()
+	conf.CacheDir = tempDir()
 
 	ss, err := streisand.NewServer(conf)
 	if err != nil {
@@ -52,18 +48,16 @@ func (s *Server) Close() error {
 	var err error
 	s.Http.Close()
 	errchain.Append(&err, s.Streisand.Close())
-	errchain.Append(&err, os.RemoveAll(s.DataDir))
-	errchain.Append(&err, os.RemoveAll(s.CacheDir))
 	return err
 }
 
-func NewServers(serverCount uint) (*Servers, error) {
+func NewServers(serverCount uint, tempDir func() string) (*Servers, error) {
 	var err error
 	s := &Servers{
 		Servers: make([]*Server, serverCount),
 	}
 	for i := uint(0); i < serverCount; i++ {
-		s.Servers[i], err = NewServer(s.getPeers)
+		s.Servers[i], err = NewServer(s.getPeers, tempDir)
 		if err != nil {
 			return nil, err
 		}
